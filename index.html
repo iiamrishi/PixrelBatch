@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PixelBatch — Bulk Image Renamer & Resizer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <section class="card">
+      <!-- Top bar -->
+                         <div class="global-statement">
+  <strong>No sign-ups. No limits. No bullshit.</strong>
+  <span>
+    Runs 100% on your machine — not some greedy site charging you money
+    for using <em>your own hardware</em>.
+  </span>
+</div>
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">PB</div>
+          <div>
+            <h1 class="brand-title">PixelBatch</h1>
+            <p class="brand-subtitle">Bulk rename & resize — right in your browser.</p>
+          </div>
+
+
+        </div>
+        <div class="topbar-right">
+          <span class="pill pill-soft">100% offline</span>
+          <span class="pill pill-outline">MIT open source</span>
+
+          <button type="button" id="themeToggle" class="pill pill-button">
+            <span class="theme-icon" data-theme-icon="dark">🌙</span>
+            <span class="theme-icon" data-theme-icon="light" style="display:none;">☀️</span>
+            <span class="theme-label">Dark</span>
+          </button>
+        </div>
+
+
+      </header>
+
+      <!-- Upload area -->
+      <section class="card-section">
+        <label class="dropzone" for="fileInput">
+          <div class="dropzone-icon">⬆️</div>
+          <div class="dropzone-text">
+            <strong>Drop images here</strong> or <span class="linkish">browse</span>
+          </div>
+          <div class="dropzone-sub">
+            PNG, JPG, WEBP · Multiple files supported
+          </div>
+          <input type="file" id="fileInput" accept="image/*" multiple />
+        </label>
+      </section>
+
+      <!-- Naming options -->
+      <section class="card-section card-section-bordered">
+        <div class="section-header">
+          <h2 class="section-title">Naming</h2>
+          <p class="section-help">Control the new filenames for your processed images.</p>
+        </div>
+
+        <div class="grid two-cols">
+          <label class="field">
+            <span class="field-label">Name prefix</span>
+            <input type="text" id="namePattern" value="image_" />
+            <span class="field-hint">Example: <code>char_</code> → <code>char_001.png</code></span>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Start index</span>
+            <input type="number" id="startIndex" value="1" min="0" />
+            <span class="field-hint">Numbers auto-increment per file.</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Resize options -->
+      <section class="card-section">
+        <div class="section-header">
+          <h2 class="section-title">Resize</h2>
+          <p class="section-help">Leave both fields empty to keep original size.</p>
+        </div>
+
+        <div class="grid two-cols">
+          <label class="field">
+            <span class="field-label">Target width (px)</span>
+            <input type="number" id="widthInput" placeholder="e.g. 512" min="1" />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Target height (px)</span>
+            <input type="number" id="heightInput" placeholder="e.g. 512" min="1" />
+          </label>
+        </div>
+
+        <label class="checkbox">
+          <input type="checkbox" id="keepAspect" checked />
+          <span>Keep aspect ratio when only one dimension is set</span>
+        </label>
+
+        <div class="preset-row">
+          <span class="preset-label">Quick presets:</span>
+          <button type="button" class="chip" data-preset="512">512×512</button>
+          <button type="button" class="chip" data-preset="1024">1024×1024</button>
+          <button type="button" class="chip" data-preset="1280x720">1280×720</button>
+        </div>
+      </section>
+
+      <!-- Actions -->
+      <section class="card-section actions">
+        <div class="actions-left">
+          <button id="processBtn" class="btn primary">Process images</button>
+          <button id="downloadAllBtn" class="btn" disabled>Download all (ZIP)</button>
+        </div>
+        <div class="actions-right">
+          <button id="clearBtn" class="btn subtle">Clear</button>
+        </div>
+      </section>
+
+      <!-- Preview -->
+      <section class="card-section">
+        <div class="section-header">
+          <h2 class="section-title">Preview</h2>
+          <p class="section-help" id="previewHelp">
+            Drop some images and click <strong>Process images</strong> to see the resized & renamed versions here.
+          </p>
+        </div>
+        <div id="previewList" class="preview-grid"></div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="card-footer">
+        <div class="footer-row">
+          <div class="footer-left" id="stats">
+            <span class="footer-text">No files processed yet.</span>
+          </div>
+          <div class="footer-right">
+            <span class="footer-text">
+              Made with vanilla JS · MIT licensed
+            </span>
+          </div>
+        </div>
+        
+      </footer>
+    </section>
+  </main>
+
+  <!-- Hidden canvas used for resizing -->
+  <canvas id="hiddenCanvas" style="display:none;"></canvas>
+
+  <script src="libs/jszip.min.js"></script>
+  <script src="script.js"></script>
+  <script>
+    // --- Preset chips ---
+    const presetChips = document.querySelectorAll(".chip");
+
+    presetChips.forEach(chip => {
+      chip.addEventListener("click", () => {
+        const value = chip.getAttribute("data-preset");
+        const widthInputEl = document.getElementById("widthInput");
+        const heightInputEl = document.getElementById("heightInput");
+
+        if (value.includes("x")) {
+          const [w, h] = value.split("x").map(Number);
+          widthInputEl.value = w;
+          heightInputEl.value = h;
+        } else {
+          widthInputEl.value = value;
+          heightInputEl.value = value;
+        }
+      });
+    });
+
+    // --- Theme toggle ---
+    const themeToggle = document.getElementById("themeToggle");
+    const darkIcon = themeToggle.querySelector('[data-theme-icon="dark"]');
+    const lightIcon = themeToggle.querySelector('[data-theme-icon="light"]');
+    const themeLabel = themeToggle.querySelector(".theme-label");
+    const THEME_KEY = "pixelbatch-theme";
+
+    function applyTheme(theme) {
+      if (theme === "light") {
+        document.body.classList.add("theme-light");
+        document.body.classList.remove("theme-dark");
+        lightIcon.style.display = "";
+        darkIcon.style.display = "none";
+        themeLabel.textContent = "Light";
+      } else {
+        document.body.classList.add("theme-dark");
+        document.body.classList.remove("theme-light");
+        darkIcon.style.display = "";
+        lightIcon.style.display = "none";
+        themeLabel.textContent = "Dark";
+      }
+    }
+
+    // Initial theme (from localStorage or default dark)
+    const storedTheme = localStorage.getItem(THEME_KEY);
+    applyTheme(storedTheme === "light" ? "light" : "dark");
+
+    // Toggle on click
+    themeToggle.addEventListener("click", () => {
+      const isLight = document.body.classList.contains("theme-light");
+      const next = isLight ? "dark" : "light";
+      applyTheme(next);
+      localStorage.setItem(THEME_KEY, next);
+    });
+  </script>
+</body>
+</html>
